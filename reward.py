@@ -39,7 +39,6 @@ def reward_function(params):
     is_crashed = params['is_crashed']
     is_offtrack = params['is_offtrack']
     position = (params['x'], params['y'])
-    progress = params['progress']
     steps = params['steps']
     speed = params['speed']
     track_length = params['track_length']
@@ -47,7 +46,6 @@ def reward_function(params):
     waypoints = params['waypoints']
 
     # derived_params
-    num_waypoints = len(waypoints)
 
     current_waypoint_index = min(closest_waypoints)
     next_waypoint_index = max(closest_waypoints)
@@ -55,26 +53,20 @@ def reward_function(params):
     current_waypoint = waypoints[current_waypoint_index]
     next_waypoint = waypoints[next_waypoint_index]
 
-    distance_to_current_waypoint = euclidian_distance(position, current_waypoint)
-    distance_to_next_waypoint = euclidian_distance(position, next_waypoint)
-
     # reward calculations
 
-    # reward for advancing towards closest waypoint
-    reward += .5 * (1 + current_waypoint_index) / (1 + distance_to_current_waypoint)
-
-    # reward for advancing towards next waypoint
-    reward += 1.5 * (1 + next_waypoint_index) / (1 + distance_to_next_waypoint)
-
     # reward for going fast
-    reward += min(4, speed) * 2
+    reward += 1 / (5 - min(4, speed))
 
-    # scale reward by how centered the car is
+    # reward for being centered
     half_track_width = track_width / 2
-    reward *= (half_track_width - distance_from_center) / half_track_width
+    reward += 1 - (distance_from_center / half_track_width)
 
-    # reward for turning towards center line
-    reward *= track_direction_factor(heading, current_waypoint, next_waypoint)
+    # reward for steering towards center
+    reward += track_direction_reward(heading, current_waypoint, next_waypoint)
+
+    if not all_wheels_on_track:
+        reward -= 1
 
     if is_crashed:
         reward = -1000
@@ -87,17 +79,7 @@ def reward_function(params):
     return float(reward)
 
 
-
-def euclidian_distance(a, b):
-    x1, y1 = a
-    x2, y2 = b
-    return math.sqrt(
-        (x2 - x1) ** 2
-        + (y2 - y1) ** 2
-    )
-
-
-def track_direction_factor(heading, a, b):
+def track_direction_reward(heading, a, b):
     x1, y1 = a
     x2, y2 = b
     # Calculate the direction in radius, arctan2(dy, dx), the result is (-pi, pi) in radians
