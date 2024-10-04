@@ -49,13 +49,27 @@ def reward_function(params):
 
     # derived_params
 
-    current_waypoint_index = min(closest_waypoints)
-    next_waypoint_index = max(closest_waypoints)
+    current_waypoint_index, next_waypoint_index = closest_waypoints
 
     current_waypoint = waypoints[current_waypoint_index]
     next_waypoint = waypoints[next_waypoint_index]
 
+    distance_from_current_waypoint = euclidean_distance(position, current_waypoint)
+    distance_from_next_waypoint = euclidean_distance(position, next_waypoint)
+
     # reward calculations
+
+    # reward for advancing towards closest waypoint
+    reward += .75 / (1 + distance_from_current_waypoint)
+
+    # reward for advancing towards next waypoint
+    reward += 1.5 / (1 + distance_from_next_waypoint)
+
+    # reward for efficiency
+    meters_per_percent = track_length / 100
+    expected_meters_travelled = progress * meters_per_percent
+    efficiency_reward = expected_meters_travelled / max(steps, expected_meters_travelled)
+    reward += 2 * efficiency_reward if efficiency_reward > 1 else -efficiency_reward
 
     # reward for being centered
     half_track_width = track_width / 2
@@ -69,29 +83,33 @@ def reward_function(params):
     # reward for correct heading
     reward += 1 - (track_heading_difference / 180)
 
-    # reward for corrective steering
-    corrective_steering_difference = normalize_angular_difference(track_direction - heading + steering_angle)
-    reward += 1 - (corrective_steering_difference / 180)
-
     # reward for going fast
     reward += 2 / (5 - min(4, speed)) 
 
     if not all_wheels_on_track:
-        reward -= 10
+        reward -= 5
 
     if is_crashed:
-        reward = -1000
+        reward -= 1000
     
     if is_offtrack:
-        reward = -1000
-
-    reward -= steps / 100
+        reward -= 1000
 
     return float(reward)
 
 
+def euclidean_distance(a, b):
+    x1, y1 = a
+    x2, y2 = b
+    return math.sqrt(
+        (x2 - x1) ** 2
+        + (y2 - y1) ** 2
+    )
+
+
 def normalize_angular_difference(difference):
     return abs((difference + 180) % 360 - 180)
+
 
 def compute_track_direction(a, b):
     x1, y1 = a
