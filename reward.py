@@ -39,8 +39,10 @@ def reward_function(params):
     is_crashed = params['is_crashed']
     is_offtrack = params['is_offtrack']
     position = (params['x'], params['y'])
-    steps = params['steps']
+    progress = params['progress']
     speed = params['speed']
+    steering_angle = params['steering_angle']
+    steps = params['steps']
     track_length = params['track_length']
     track_width = params['track_width']
     waypoints = params['waypoints']
@@ -55,18 +57,27 @@ def reward_function(params):
 
     # reward calculations
 
-    # reward for going fast
-    reward += 1 / (5 - min(4, speed))
-
     # reward for being centered
     half_track_width = track_width / 2
     reward += 1 - (distance_from_center / half_track_width)
 
-    # reward for steering towards center
-    reward += track_direction_reward(heading, current_waypoint, next_waypoint)
+    # reward for proper heading
+    # Calculate the difference between the track direction and the heading direction of the car
+    track_direction = compute_track_direction(current_waypoint, next_waypoint)
+    track_heading_difference = normalize_angular_difference(track_direction - heading)
+
+    # reward for correct heading
+    reward += 1 - (track_heading_difference / 180)
+
+    # reward for corrective steering
+    corrective_steering_difference = normalize_angular_difference(track_direction - heading + steering_angle)
+    reward += 1 - (corrective_steering_difference / 180)
+
+    # reward for going fast
+    reward += 2 / (5 - min(4, speed)) 
 
     if not all_wheels_on_track:
-        reward -= 1
+        reward -= 10
 
     if is_crashed:
         reward = -1000
@@ -79,22 +90,13 @@ def reward_function(params):
     return float(reward)
 
 
-def track_direction_reward(heading, a, b):
+def normalize_angular_difference(difference):
+    return abs((difference + 180) % 360 - 180)
+
+def compute_track_direction(a, b):
     x1, y1 = a
     x2, y2 = b
     # Calculate the direction in radius, arctan2(dy, dx), the result is (-pi, pi) in radians
     track_direction = math.atan2(y2 - y1, x2 - x1)
     # Convert to degree
-    track_direction = math.degrees(track_direction)
-
-    # Calculate the difference between the track direction and the heading direction of the car
-    direction_diff = abs(track_direction - heading)
-    if direction_diff > 180:
-        direction_diff = 360 - direction_diff
-
-    # Penalize the reward if the difference is too large
-    DIRECTION_THRESHOLD = 10.0
-    if direction_diff > DIRECTION_THRESHOLD:
-        return .5
-    
-    return 1
+    return math.degrees(track_direction)
