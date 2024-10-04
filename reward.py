@@ -69,7 +69,7 @@ def reward_function(params):
     meters_per_percent = track_length / 100
     expected_meters_travelled = progress * meters_per_percent
     efficiency_reward = expected_meters_travelled / max(steps, expected_meters_travelled)
-    reward += 2 * efficiency_reward if efficiency_reward > 1 else -efficiency_reward
+    reward += efficiency_reward ** 2 if efficiency_reward > 1 else -efficiency_reward
 
     # reward for being centered
     half_track_width = track_width / 2
