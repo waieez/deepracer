@@ -60,14 +60,15 @@ def reward_function(params):
     # reward calculations
 
     # reward for advancing towards closest waypoint
-    reward += .5 / (1 + distance_from_current_waypoint)
+    advancing_reward = 0
+    advancing_reward += .5 / (1 + distance_from_current_waypoint)
 
     # reward for advancing towards next waypoint
-    reward += 2 / (1 + distance_from_next_waypoint)
+    advancing_reward += 2 / (1 + distance_from_next_waypoint)
 
     # reward for being centered
     half_track_width = track_width / 2
-    reward += 1 - (distance_from_center / half_track_width)
+    centering_reward = 1 - (distance_from_center / half_track_width)
 
     # reward for proper heading
     # Calculate the difference between the track direction and the heading direction of the car
@@ -75,16 +76,19 @@ def reward_function(params):
     track_heading_difference = normalize_angular_difference(track_direction - heading)
 
     # reward for correct heading
-    reward += 1 - (track_heading_difference / 180)
+    heading_reward = 1 - (track_heading_difference / 180)
 
     # reward for going fast
-    reward += 1 / (5 - min(4, speed)) 
+    speed_reward = 1 / (5 - min(4, speed)) 
 
     # reward for efficiency
     meters_per_percent = track_length / 100
     expected_meters_travelled = progress * meters_per_percent
     efficiency_reward = expected_meters_travelled / max(steps, 1)
-    reward *= efficiency_reward ** 2 if efficiency_reward > 1 else -efficiency_reward
+    efficiency_reward = efficiency_reward ** 2 if efficiency_reward > 1 else efficiency_reward
+
+    reward = (advancing_reward + centering_reward + heading_reward)
+    reward += reward * speed_reward * efficiency_reward
 
     if not all_wheels_on_track:
         reward -= 5
