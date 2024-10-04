@@ -65,12 +65,6 @@ def reward_function(params):
     # reward for advancing towards next waypoint
     reward += 2 / (1 + distance_from_next_waypoint)
 
-    # reward for efficiency
-    meters_per_percent = track_length / 100
-    expected_meters_travelled = progress * meters_per_percent
-    efficiency_reward = expected_meters_travelled / max(steps, 1)
-    reward += efficiency_reward ** 2 if efficiency_reward > 1 else -efficiency_reward
-
     # reward for being centered
     half_track_width = track_width / 2
     reward += 1 - (distance_from_center / half_track_width)
@@ -85,6 +79,12 @@ def reward_function(params):
 
     # reward for going fast
     reward += 1 / (5 - min(4, speed)) 
+
+    # reward for efficiency
+    meters_per_percent = track_length / 100
+    expected_meters_travelled = progress * meters_per_percent
+    efficiency_reward = expected_meters_travelled / max(steps, 1)
+    reward *= efficiency_reward ** 2 if efficiency_reward > 1 else -efficiency_reward
 
     if not all_wheels_on_track:
         reward -= 5
